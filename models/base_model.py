@@ -158,19 +158,17 @@ class BaseModel(ABC):
                 else:
                     torch.save(net.cpu().state_dict(), save_path)
 
-    def __patch_instance_norm_state_dict(self, state_dict, module, keys, i=0):
+    def __patch_instance_norm_state_dict(self, state_dict, net):
         """Fix InstanceNorm checkpoints incompatibility (prior to 0.4)"""
-        key = keys[i]
-        if i + 1 == len(keys):  # at the end, pointing to a parameter/buffer
-            if module.__class__.__name__.startswith('InstanceNorm') and \
-                    (key == 'running_mean' or key == 'running_var'):
-                if getattr(module, key) is None:
-                    state_dict.pop('.'.join(keys))
-            if module.__class__.__name__.startswith('InstanceNorm') and \
-               (key == 'num_batches_tracked'):
-                state_dict.pop('.'.join(keys))
-        else:
-            self.__patch_instance_norm_state_dict(state_dict, getattr(module, key), keys, i + 1)
+        modules = dict(net.named_modules())
+        for key in list(state_dict.keys()):
+            path, field = key.rsplit('.', 1)
+            if modules[path].__class__.__name__.startswith('InstanceNorm'):
+                if field in ['running_mean', 'running_var']:
+                    if getattr(modules[path], field) is None:
+                        state_dict.pop(key)
+                if field == 'num_batches_tracked':
+                    state_dict.pop(key)
 
     def load_networks(self, epoch):
         """Load all the networks from the disk.
@@ -179,6 +177,7 @@ class BaseModel(ABC):
             epoch (int) -- current epoch; used in the file name '%s_net_%s.pth' % (epoch, name)
         """
         for name in self.model_names:
+            print("NNNNN", name)
             if isinstance(name, str):
                 load_filename = '%s_net_%s.pth' % (epoch, name)
                 load_path = os.path.join(self.save_dir, load_filename)
@@ -193,8 +192,7 @@ class BaseModel(ABC):
                     del state_dict._metadata
 
                 # patch InstanceNorm checkpoints prior to 0.4
-                for key in list(state_dict.keys()):  # need to copy keys here because we mutate in loop
-                    self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
+                self.__patch_instance_norm_state_dict(state_dict, net)
                 net.load_state_dict(state_dict)
 
     def print_networks(self, verbose):

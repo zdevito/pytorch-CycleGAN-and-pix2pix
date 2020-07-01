@@ -32,7 +32,27 @@ from data import create_dataset
 from models import create_model
 from util.visualizer import save_images
 from util import html
+import torch
 
+
+def run_example(output=None):
+    args = "--dataroot datasets/horse2zebra/testA --name horse2zebra_pretrained --model test --no_dropout"
+    opt = TestOptions().parse(args.split(' '))
+    opt.num_threads = 0   # test code only supports num_threads = 1
+    opt.batch_size = 1    # test code only supports batch_size = 1
+    opt.serial_batches = True  # disable data shuffling; comment this line if results on randomly chosen images are needed.
+    opt.no_flip = True    # no flip; comment this line if results on flipped images are needed.
+    opt.display_id = -1   # no visdom display; the test code saves the results to a HTML file.
+    model = create_model(opt)      # create a model given opt.model and other options
+    data = torch.load('example_input.pt')    
+    model.set_input(data)
+    model.test()           # run inference
+    visuals = model.get_current_visuals()  # get image results
+    if output is not None:
+        torch.save(visuals['fake'], output)
+    model.set_input(data)
+    model.test()           # run inference
+    visuals = model.get_current_visuals()  # get image results
 
 if __name__ == '__main__':
     opt = TestOptions().parse()  # get test options
@@ -44,7 +64,7 @@ if __name__ == '__main__':
     opt.display_id = -1   # no visdom display; the test code saves the results to a HTML file.
     dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
     model = create_model(opt)      # create a model given opt.model and other options
-    model.setup(opt)               # regular setup: load and print networks; create schedulers
+    # model.setup(opt)               # regular setup: load and print networks; create schedulers
     # create a website
     web_dir = os.path.join(opt.results_dir, opt.name, '{}_{}'.format(opt.phase, opt.epoch))  # define the website directory
     if opt.load_iter > 0:  # load_iter is 0 by default
@@ -60,6 +80,7 @@ if __name__ == '__main__':
         if i >= opt.num_test:  # only apply our model to opt.num_test images.
             break
         model.set_input(data)  # unpack data from data loader
+        torch.save(data, 'example_input.pt')
         model.test()           # run inference
         visuals = model.get_current_visuals()  # get image results
         img_path = model.get_image_paths()     # get image paths
