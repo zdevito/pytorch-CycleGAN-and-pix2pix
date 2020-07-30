@@ -35,7 +35,7 @@ from util import html
 import torch
 
 
-def run_example(output=None, script=True):
+def get_model(script):
     args = "--dataroot datasets/horse2zebra/testA --name horse2zebra_pretrained --model test --no_dropout"
     opt = TestOptions().parse(args.split(' '))
     opt.num_threads = 0   # test code only supports num_threads = 1
@@ -44,21 +44,14 @@ def run_example(output=None, script=True):
     opt.no_flip = True    # no flip; comment this line if results on flipped images are needed.
     opt.display_id = -1   # no visdom display; the test code saves the results to a HTML file.
     model = create_model(opt)      # create a model given opt.model and other options
+    model = model.netG.module
     data = torch.load('example_input.pt')    
+    input = data['A'].cuda()
+        
     if script:
-        print("running scripted...")
-        m = torch.jit.script(model.netG.module)
-        ip = data['A'].cuda()
-        output_tensor = m(ip)
-    else:
-        print("running eager...")
-        model.set_input(data)
-        model.test()
-        visuals = model.get_current_visuals()  # get image results
-        output_tensor = visuals['fake']
-
-    if output is not None:
-        torch.save(output_tensor, output)
+        model = torch.jit.script(model)
+    
+    return model, (input,)
 
 if __name__ == '__main__':
     opt = TestOptions().parse()  # get test options
