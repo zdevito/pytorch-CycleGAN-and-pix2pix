@@ -36,7 +36,7 @@ import torch
 
 
 def get_model(script):
-    args = "--dataroot datasets/horse2zebra/testA --name horse2zebra_pretrained --model test --no_dropout"
+    args = f"--dataroot {os.path.dirname(__file__)}/datasets/horse2zebra/testA --name horse2zebra_pretrained --model test --no_dropout"
     opt = TestOptions().parse(args.split(' '))
     opt.num_threads = 0   # test code only supports num_threads = 1
     opt.batch_size = 1    # test code only supports batch_size = 1
