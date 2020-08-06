@@ -4,6 +4,7 @@
 import random
 import argparse
 import torch
+import os
 import numpy as np
 
 random.seed(1337)
@@ -12,6 +13,7 @@ np.random.seed(1337)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
+import train_cyclegan
 from train_cyclegan import prepare_training_loop
 from test_cyclegan import get_model
 
@@ -26,7 +28,7 @@ class Model:
 
         self.device = device
         self.jit = jit
-        train_args = "--dataroot ./datasets/horse2zebra --name horse2zebra --model cycle_gan --display_id 0 --n_epochs 3 --n_epochs_decay 3"
+        train_args = f"--dataroot {os.path.dirname(train_cyclegan.__file__)}/datasets/horse2zebra --name horse2zebra --model cycle_gan --display_id 0 --n_epochs 3 --n_epochs_decay 3"
         self.training_loop = prepare_training_loop(train_args.split(' '))
         self.model, self.input = get_model(jit)
 
